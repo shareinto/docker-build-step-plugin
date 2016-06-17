@@ -1,6 +1,13 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson"
     xmlns:f="/lib/form">
 
+
+      <f:entry title="Docker URL" field="dockerUrl" description="Docker server REST API URL">
+              <f:textbox />
+         </f:entry>
+         <f:entry field="dockerVersion" title="Docker version">
+             <f:textbox />
+         </f:entry>
     <f:entry field="image" title="Name of the image to tag (repository/image:tag)">
         <f:textbox />
     </f:entry>

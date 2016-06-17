@@ -28,6 +28,8 @@ import com.github.dockerjava.api.NotFoundException;
  */
 public class SaveImageCommand extends DockerCommand {
 
+	private final String dockerUrl;
+	private final String dockerVersion;
 	private final String imageName;
 	private final String imageTag;
 	private final String destination;
@@ -35,15 +37,25 @@ public class SaveImageCommand extends DockerCommand {
 	private final boolean ignoreIfNotFound;
 
 	@DataBoundConstructor
-	public SaveImageCommand(final String imageName, final String imageTag,
+	public SaveImageCommand(String dockerUrl, String dockerVersion,final String imageName, final String imageTag,
 			final String destination, final String filename,
 			final boolean ignoreIfNotFound) {
 
+		this.dockerUrl = dockerUrl;
+		this.dockerVersion = dockerVersion;
 		this.imageName = imageName;
 		this.imageTag = imageTag;
 		this.destination = destination;
 		this.filename = filename;
 		this.ignoreIfNotFound = ignoreIfNotFound;
+	}
+
+	public String getDockerVersion() {
+		return dockerVersion;
+	}
+
+	public String getDockerUrl() {
+		return dockerUrl;
 	}
 
 	public String getImageName() {
@@ -97,7 +109,7 @@ public class SaveImageCommand extends DockerCommand {
 					"Destination is not a valid path");
 		}
 		
-		final DockerClient client = getClient(build, null);
+		final DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
 		try {
 			console.logInfo(String
 					.format("Started save image '%s' ... ",

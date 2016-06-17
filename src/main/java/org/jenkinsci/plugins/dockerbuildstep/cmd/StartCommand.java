@@ -1,9 +1,13 @@
 package org.jenkinsci.plugins.dockerbuildstep.cmd;
 
+import com.google.common.base.Charsets;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.util.FormValidation;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -11,11 +15,9 @@ import java.util.Map;
 import org.jenkinsci.plugins.dockerbuildstep.action.DockerContainerConsoleAction;
 import org.jenkinsci.plugins.dockerbuildstep.action.EnvInvisibleAction;
 import org.jenkinsci.plugins.dockerbuildstep.log.ConsoleLogger;
-import org.jenkinsci.plugins.dockerbuildstep.util.BindParser;
-import org.jenkinsci.plugins.dockerbuildstep.util.LinkUtils;
-import org.jenkinsci.plugins.dockerbuildstep.util.PortBindingParser;
-import org.jenkinsci.plugins.dockerbuildstep.util.PortUtils;
-import org.jenkinsci.plugins.dockerbuildstep.util.Resolver;
+import org.jenkinsci.plugins.dockerbuildstep.log.container.DockerLogMessage;
+import org.jenkinsci.plugins.dockerbuildstep.log.container.DockerLogStreamReader;
+import org.jenkinsci.plugins.dockerbuildstep.util.*;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
@@ -29,14 +31,14 @@ import com.github.dockerjava.api.model.PortBinding;
 /**
  * This command starts one or more Docker containers. It also exports some build environment variables like IP or
  * started containers.
- * 
- * @see http://docs.docker.com/reference/api/docker_remote_api_v1.13/#start-a-container
- * 
+ *
  * @author vjuranek
- * 
+ * @see http://docs.docker.com/reference/api/docker_remote_api_v1.13/#start-a-container
  */
 public class StartCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final String containerIds;
     private final boolean publishAllPorts;
     private final String portBindings;
@@ -45,10 +47,13 @@ public class StartCommand extends DockerCommand {
     private final String bindMounts;
     private final boolean privileged;
     private final String containerIdsLogging;
+    private final boolean interactive;
 
     @DataBoundConstructor
-    public StartCommand(String containerIds, boolean publishAllPorts, String portBindings, String waitPorts,
-            String links, String bindMounts, boolean privileged, String containerIdsLogging) {
+    public StartCommand(String dockerUrl, String dockerVersion, String containerIds, boolean publishAllPorts, String portBindings, String waitPorts,
+                        String links, String bindMounts, boolean privileged, String containerIdsLogging, boolean interactive) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.containerIds = containerIds;
         this.publishAllPorts = publishAllPorts;
         this.portBindings = portBindings;
@@ -57,6 +62,15 @@ public class StartCommand extends DockerCommand {
         this.bindMounts = bindMounts;
         this.privileged = privileged;
         this.containerIdsLogging = containerIdsLogging;
+        this.interactive = interactive;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     public String getContainerIds() {
@@ -104,7 +118,7 @@ public class StartCommand extends DockerCommand {
         Bind[] bindsRes = BindParser.parse(Resolver.buildVar(build, bindMounts));
         List<String> logIds = Arrays.asList(Resolver.buildVar(build, containerIdsLogging).split(","));
 
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null, dockerUrl, dockerVersion);
 
         // TODO check, if container exists and is stopped (probably catch exception)
         for (String id : ids) {
@@ -112,12 +126,23 @@ public class StartCommand extends DockerCommand {
 
             DockerContainerConsoleAction outAction = null;
             if (logIds.contains(id)) {
-                outAction = attachContainerOutput(build, id);
+                //outAction = attachContainerOutput(build, id, dockerUrl, dockerVersion);
             }
 
             client.startContainerCmd(id).withPublishAllPorts(publishAllPorts).withPortBindings(portBindingsRes)
                     .withLinks(linksRes.getLinks()).withBinds(bindsRes).withPrivileged(privileged).exec();
             console.logInfo("started container id " + id);
+
+            if (interactive) {
+                InputStream is = client.attachContainerCmd(id).withFollowStream().withStdOut().withStdErr().exec();
+                CommandUtils.logCommandResultStream(is, console,
+                        "Failed to parse docker response when exec start");
+
+                int exitCode = client.waitContainerCmd(id).exec();
+                if (exitCode != 0) {
+                    throw new RuntimeException("exit code is not zero");
+                }
+            }
 
             InspectContainerResponse inspectResp = client.inspectContainerCmd(id).exec();
             if (outAction != null) {
@@ -131,6 +156,14 @@ public class StartCommand extends DockerCommand {
         if (waitPorts != null && !waitPorts.isEmpty()) {
             String waitPortsResolved = Resolver.buildVar(build, waitPorts);
             waitForPorts(waitPortsResolved, client, console);
+        }
+    }
+
+    private void process(DockerLogStreamReader ls, OutputStreamWriter w) throws IOException {
+        DockerLogMessage m;
+        while ((m = ls.nextMessage()) != null) {
+            w.append(Charsets.UTF_8.decode(m.content()));
+            w.flush();
         }
     }
 

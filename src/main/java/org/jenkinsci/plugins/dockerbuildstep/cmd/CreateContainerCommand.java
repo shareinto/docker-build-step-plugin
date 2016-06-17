@@ -21,14 +21,14 @@ import com.github.dockerjava.api.model.Links;
 
 /**
  * This command creates new container from specified image.
- * 
- * @see http://docs.docker.com/reference/api/docker_remote_api_v1.13/#create-a-container
- * 
+ *
  * @author vjuranek
- * 
+ * @see http://docs.docker.com/reference/api/docker_remote_api_v1.13/#create-a-container
  */
 public class CreateContainerCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final String image;
     private final String command;
     private final String hostName;
@@ -40,8 +40,10 @@ public class CreateContainerCommand extends DockerCommand {
     private final String memoryLimit;
 
     @DataBoundConstructor
-    public CreateContainerCommand(String image, String command, String hostName, String containerName, String envVars,
-            String links, String exposedPorts, String cpuShares, String memoryLimit) throws IllegalArgumentException {
+    public CreateContainerCommand(String dockerUrl, String dockerVersion, String image, String command, String hostName, String containerName, String envVars,
+                                  String links, String exposedPorts, String cpuShares, String memoryLimit) throws IllegalArgumentException {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.image = image;
         this.command = command;
         this.hostName = hostName;
@@ -51,6 +53,14 @@ public class CreateContainerCommand extends DockerCommand {
         this.exposedPorts = exposedPorts;
         this.cpuShares = cpuShares;
         this.memoryLimit = memoryLimit;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     public String getImage() {
@@ -107,7 +117,7 @@ public class CreateContainerCommand extends DockerCommand {
         String cpuSharesRes = Resolver.buildVar(build, cpuShares);
         String memoryLimitRes = Resolver.buildVar(build, memoryLimit);
 
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null, dockerUrl, dockerVersion);
         CreateContainerCmd cfgCmd = client.createContainerCmd(imageRes);
         if (!commandRes.isEmpty()) {
             cfgCmd.withCmd(commandRes.split(" "));

@@ -14,25 +14,35 @@ import com.github.dockerjava.api.command.CommitCmd;
 
 /**
  * This command commits changes done in specified container and create new image from it.
- * 
- * @see http://docs.docker.com/reference/api/docker_remote_api_v1.13/#create-a-new-image-from-a-containers-changes
- * 
+ *
  * @author vjuranek
- * 
+ * @see http://docs.docker.com/reference/api/docker_remote_api_v1.13/#create-a-new-image-from-a-containers-changes
  */
 public class CommitCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final String containerId;
     private final String repo;
     private final String tag;
     private final String runCmd;
 
     @DataBoundConstructor
-    public CommitCommand(String containerId, String repo, String tag, String runCmd) {
+    public CommitCommand(String dockerUrl, String dockerVersion, String containerId, String repo, String tag, String runCmd) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.containerId = containerId;
         this.repo = repo;
         this.tag = tag;
         this.runCmd = runCmd;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     public String getContainerId() {
@@ -64,7 +74,7 @@ public class CommitCommand extends DockerCommand {
         String tagRes = Resolver.buildVar(build, tag);
         String runCmdRes = Resolver.buildVar(build, runCmd);
 
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null, dockerUrl, dockerVersion);
         CommitCmd commitCmd =
                 client.commitCmd(containerIdRes).withRepository(repoRes).withTag(tagRes).withCmd(runCmdRes);
         String imageId = commitCmd.exec();

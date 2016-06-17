@@ -24,17 +24,29 @@ import com.github.dockerjava.api.NotFoundException;
  */
 public class RemoveCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final String containerIds;
     private final boolean ignoreIfNotFound;
     private final boolean removeVolumes;
     private final boolean force;
 
     @DataBoundConstructor
-    public RemoveCommand(String containerIds, boolean ignoreIfNotFound, boolean removeVolumes, boolean force) {
+    public RemoveCommand(String dockerUrl, String dockerVersion,String containerIds, boolean ignoreIfNotFound, boolean removeVolumes, boolean force) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.containerIds = containerIds;
         this.ignoreIfNotFound = ignoreIfNotFound;
         this.removeVolumes = removeVolumes;
         this.force = force;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     public String getContainerIds() {
@@ -64,7 +76,7 @@ public class RemoveCommand extends DockerCommand {
         String containerIdsRes = Resolver.buildVar(build, containerIds);
 
         List<String> ids = Arrays.asList(containerIdsRes.split(","));
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
         for (String id : ids) {
             id = id.trim();
             try {

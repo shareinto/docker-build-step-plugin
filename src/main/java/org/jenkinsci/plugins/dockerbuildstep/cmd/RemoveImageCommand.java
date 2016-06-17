@@ -22,16 +22,28 @@ import com.github.dockerjava.api.NotFoundException;
  */
 public class RemoveImageCommand extends DockerCommand {
 
+	private final String dockerUrl;
+	private final String dockerVersion;
 	private final String imageName;
 	private final String imageId;
 	private final boolean ignoreIfNotFound;
 
 	@DataBoundConstructor
-	public RemoveImageCommand(final String imageName, final String imageId,
+	public RemoveImageCommand(String dockerUrl, String dockerVersion,final String imageName, final String imageId,
 			final boolean ignoreIfNotFound) {
+		this.dockerUrl = dockerUrl;
+		this.dockerVersion = dockerVersion;
 		this.imageName = imageName;
 		this.imageId = imageId;
 		this.ignoreIfNotFound = ignoreIfNotFound;
+	}
+
+	public String getDockerVersion() {
+		return dockerVersion;
+	}
+
+	public String getDockerUrl() {
+		return dockerUrl;
 	}
 
 	public String getImageName() {
@@ -58,7 +70,7 @@ public class RemoveImageCommand extends DockerCommand {
 		final String imageNameRes = Resolver.buildVar(build, imageName);
 		final String imageIdRes = Resolver.buildVar(build, imageId);
 		
-		DockerClient client = getClient(build, null);
+		DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
 		try {
 			if (imageIdRes == null || imageIdRes.isEmpty()) {
 				client.removeImageCmd(imageNameRes).exec();

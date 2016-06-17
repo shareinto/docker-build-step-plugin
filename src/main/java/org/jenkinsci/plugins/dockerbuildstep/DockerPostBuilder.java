@@ -26,7 +26,6 @@ import com.github.dockerjava.api.NotModifiedException;
 
 /**
  * Post build step which stops and removes the Docker container. Use to cleanup container(s) in case of a build failure.
- * 
  */
 @Extension
 public class DockerPostBuilder extends BuildStepDescriptor<Publisher> {
@@ -47,15 +46,28 @@ public class DockerPostBuilder extends BuildStepDescriptor<Publisher> {
 
     public static class DockerPostBuildStep extends Recorder {
 
+        private final String dockerUrl;
+        private final String dockerVersion;
         private final String containerIds;
         private final boolean removeVolumes;
         private final boolean force;
 
+        public String getDockerUrl() {
+            return dockerUrl;
+        }
+
+        public String getDockerVersion() {
+            return dockerVersion;
+        }
+
         @DataBoundConstructor
-        public DockerPostBuildStep(String containerIds, boolean removeVolumes, boolean force) {
+        public DockerPostBuildStep(String dockerUrl, String dockerVersion, String containerIds, boolean removeVolumes, boolean force) {
+            this.dockerUrl = dockerUrl;
+            this.dockerVersion = dockerVersion;
             this.containerIds = containerIds;
             this.removeVolumes = removeVolumes;
             this.force = force;
+
         }
 
         public BuildStepMonitor getRequiredMonitorService() {
@@ -76,12 +88,12 @@ public class DockerPostBuilder extends BuildStepDescriptor<Publisher> {
 
         @Override
         public boolean perform(@SuppressWarnings("rawtypes") AbstractBuild build, Launcher launcher,
-                BuildListener listener) throws InterruptedException, IOException {
+                               BuildListener listener) throws InterruptedException, IOException {
             ConsoleLogger clog = new ConsoleLogger(listener);
 
             List<String> ids = Arrays.asList(containerIds.split(","));
             for (String id : ids) {
-                StopCommand stopCommand = new StopCommand(id);
+                StopCommand stopCommand = new StopCommand(dockerUrl, dockerVersion, id);
                 try {
                     stopCommand.execute(build, clog);
                 } catch (NotFoundException e) {
@@ -91,7 +103,7 @@ public class DockerPostBuilder extends BuildStepDescriptor<Publisher> {
                 }
             }
 
-            RemoveCommand removeCommand = new RemoveCommand(containerIds, true, removeVolumes, force);
+            RemoveCommand removeCommand = new RemoveCommand(dockerUrl, dockerVersion, containerIds, true, removeVolumes, force);
             removeCommand.execute(build, clog);
 
             return true;

@@ -17,11 +17,22 @@ import com.github.dockerjava.api.DockerException;
 
 public class ExecStartCommand extends DockerCommand {
 
+	private final String dockerUrl;
+	private final String dockerVersion;
 	private final String commandIds;
 
 	@DataBoundConstructor
-	public ExecStartCommand(String commandIds) {
+	public ExecStartCommand(String dockerUrl, String dockerVersion,String commandIds) {
+		this.dockerUrl = dockerUrl;
+		this.dockerVersion = dockerVersion;
 		this.commandIds = commandIds;
+	}
+	public String getDockerVersion() {
+		return dockerVersion;
+	}
+
+	public String getDockerUrl() {
+		return dockerUrl;
 	}
 
 	public String getCommandIds() {
@@ -39,7 +50,7 @@ public class ExecStartCommand extends DockerCommand {
 
 		String commandIdsRes = Resolver.buildVar(build, commandIds);
 		List<String> cmdIds = Arrays.asList(commandIdsRes.split(","));
-		DockerClient client = getClient(build, null);
+		DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
 
 		// TODO execute async on containers
 		for (String cmdId : cmdIds) {

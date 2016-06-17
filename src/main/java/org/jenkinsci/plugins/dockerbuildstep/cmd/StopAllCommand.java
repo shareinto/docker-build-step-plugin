@@ -20,14 +20,26 @@ import com.github.dockerjava.api.model.Container;
  */
 public class StopAllCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     @DataBoundConstructor
-    public StopAllCommand() {
+    public StopAllCommand(String dockerUrl, String dockerVersion) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     @Override
     public void execute(@SuppressWarnings("rawtypes") AbstractBuild build, ConsoleLogger console)
             throws DockerException {
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
         List<Container> containers = client.listContainersCmd().exec();
         for (Container c : containers) {
             client.stopContainerCmd(c.getId()).exec();

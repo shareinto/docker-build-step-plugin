@@ -18,14 +18,25 @@ import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 
 public class ExecCreateAndStartCommand extends DockerCommand {
 
+	private final String dockerUrl;
+	private final String dockerVersion;
 	private final String containerIds;
 	private final String command;
 	// TODO advanced config - IO streams
 
 	@DataBoundConstructor
-	public ExecCreateAndStartCommand(String containerIds, String command) {
+	public ExecCreateAndStartCommand(String dockerUrl, String dockerVersion,String containerIds, String command) {
+		this.dockerUrl = dockerUrl;
+		this.dockerVersion = dockerVersion;
 		this.containerIds = containerIds;
 		this.command = command;
+	}
+	public String getDockerVersion() {
+		return dockerVersion;
+	}
+
+	public String getDockerUrl() {
+		return dockerUrl;
 	}
 
 	public String getContainerIds() {
@@ -52,7 +63,7 @@ public class ExecCreateAndStartCommand extends DockerCommand {
 		String commandRes = Resolver.buildVar(build, command);
 
 		List<String> ids = Arrays.asList(containerIdsRes.split(","));
-		DockerClient client = getClient(build, null);
+		DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
 		for (String id : ids) {
 			id = id.trim();
 			ExecCreateCmdResponse res = client.execCreateCmd(id).withCmd(commandRes.split(" ")).

@@ -28,18 +28,29 @@ import com.github.dockerjava.api.model.Image;
  */
 public class PullImageCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final String fromImage;
     private final String tag;
     private final String registry;
 
     @DataBoundConstructor
-    public PullImageCommand(String fromImage, String tag, String registry, DockerRegistryEndpoint dockerRegistryEndpoint) {
+    public PullImageCommand(String dockerUrl, String dockerVersion,String fromImage, String tag, String registry, DockerRegistryEndpoint dockerRegistryEndpoint) {
         super(dockerRegistryEndpoint);
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.fromImage = fromImage;
         this.tag = tag;
         this.registry = registry;
     }
 
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
+    }
     public String getFromImage() {
         return fromImage;
     }
@@ -70,7 +81,7 @@ public class PullImageCommand extends DockerCommand {
                 Resolver.buildVar(build, fromImage), Resolver.buildVar(build, tag));
 
         console.logInfo("Pulling image " + fromImageRes);
-        DockerClient client = getClient(build, getAuthConfig(build.getParent()));
+        DockerClient client = getClient(build, getAuthConfig(build.getParent()),dockerUrl,dockerVersion);
         PullImageCmd pullImageCmd = client.pullImageCmd(fromImageRes);
         InputStream inputStream = pullImageCmd.exec();
         CommandUtils.logCommandResult(inputStream, console, "Failed to parse docker response when pulling image");
@@ -97,7 +108,7 @@ public class PullImageCommand extends DockerCommand {
     }
 
     private boolean isImagePulled(AbstractBuild<?,?> build, String fromImageRes) throws DockerException {
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
         // As of December 17, 2014, Docker list image command only support
         // one filter: dangling (true or fals).
         // See https://docs.docker.com/reference/commandline/cli/#filtering_1

@@ -31,9 +31,8 @@ import com.google.common.base.Strings;
 
 /**
  * Parent class of all Docker commands.
- * 
+ *
  * @author vjuranek
- * 
  */
 public abstract class DockerCommand implements Describable<DockerCommand>, ExtensionPoint {
 
@@ -88,9 +87,15 @@ public abstract class DockerCommand implements Describable<DockerCommand>, Exten
     public abstract void execute(@SuppressWarnings("rawtypes") AbstractBuild build, ConsoleLogger console)
             throws DockerException, AbortException;
 
-    protected static DockerClient getClient(AbstractBuild<?,?> build, AuthConfig authConfig) {
-        return ((DockerBuilder.DescriptorImpl) Jenkins.getInstance().getDescriptor(DockerBuilder.class))
-                .getDockerClient(build, authConfig);
+    protected static DockerClient getClient(AbstractBuild<?, ?> build, AuthConfig authConfig, String dockerUrl, String dockerVersion) {
+        DockerBuilder.DescriptorImpl descriptor = ((DockerBuilder.DescriptorImpl) Jenkins.getInstance().getDescriptorOrDie(DockerBuilder.class));
+        if (dockerUrl == null || dockerUrl.equals("")) {
+            dockerUrl = descriptor.getDockerUrl();
+        }
+        if (dockerVersion == null || dockerVersion.equals("")) {
+            dockerVersion = descriptor.getDockerVersion();
+        }
+        return descriptor.getDockerClient(build, authConfig, dockerUrl, dockerVersion);
     }
 
     public DockerCommandDescriptor getDescriptor() {
@@ -98,7 +103,7 @@ public abstract class DockerCommand implements Describable<DockerCommand>, Exten
     }
 
     public static DescriptorExtensionList<DockerCommand, DockerCommandDescriptor> all() {
-        return Jenkins.getInstance().<DockerCommand, DockerCommandDescriptor> getDescriptorList(DockerCommand.class);
+        return Jenkins.getInstance().<DockerCommand, DockerCommandDescriptor>getDescriptorList(DockerCommand.class);
     }
 
     public String getInfoString() {
@@ -109,9 +114,9 @@ public abstract class DockerCommand implements Describable<DockerCommand>, Exten
      * Only the first container started is attached!
      */
     protected static DockerContainerConsoleAction attachContainerOutput(
-            @SuppressWarnings("rawtypes") AbstractBuild build, String containerId) throws DockerException {
+            @SuppressWarnings("rawtypes") AbstractBuild build, String containerId, String dockerUrl, String dockerVersion) throws DockerException {
         try {
-            DockerContainerConsoleAction outAction = new DockerContainerConsoleAction(build, containerId).start();
+            DockerContainerConsoleAction outAction = new DockerContainerConsoleAction(build, containerId, dockerUrl, dockerVersion).start();
             build.addAction(outAction);
             return outAction;
         } catch (IOException e) {

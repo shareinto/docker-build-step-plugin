@@ -26,17 +26,29 @@ import com.github.dockerjava.api.command.PushImageCmd;
  * 
  */
 public class PushImageCommand extends DockerCommand {
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final String image;
     private final String tag;
     private final String registry;
 
     @DataBoundConstructor
-    public PushImageCommand(String image, String tag, String registry,
+    public PushImageCommand(String dockerUrl, String dockerVersion,String image, String tag, String registry,
         DockerRegistryEndpoint dockerRegistryEndpoint) {
         super(dockerRegistryEndpoint);
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.image = image;
         this.tag = tag;
         this.registry = registry;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     public String getImage() {
@@ -66,7 +78,7 @@ public class PushImageCommand extends DockerCommand {
             null);
 
         console.logInfo("Pushing image " + imageRes);
-        DockerClient client = getClient(build, getAuthConfig(build.getParent()));
+        DockerClient client = getClient(build, getAuthConfig(build.getParent()),dockerUrl,dockerVersion);
         PushImageCmd pushImageCmd = client.pushImageCmd(imageRes).withTag(
                 Resolver.buildVar(build, tag));
 

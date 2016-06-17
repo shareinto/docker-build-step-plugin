@@ -17,6 +17,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class TagImageCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final String image;
     private final String repository;
     private final String tag;
@@ -24,13 +26,23 @@ public class TagImageCommand extends DockerCommand {
     private final boolean withForce;
 
     @DataBoundConstructor
-    public TagImageCommand(final String image, final String repository, final String tag,
+    public TagImageCommand(String dockerUrl, String dockerVersion,final String image, final String repository, final String tag,
                            final boolean ignoreIfNotFound, final boolean withForce) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.image = image;
         this.repository = repository;
         this.tag = tag;
         this.ignoreIfNotFound = ignoreIfNotFound;
         this.withForce = withForce;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     public String getImage() {
@@ -72,7 +84,7 @@ public class TagImageCommand extends DockerCommand {
         final String repositoryRes = Resolver.buildVar(build, repository);
         final String tagRes = Resolver.buildVar(build, tag);
 
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
         try {
                 client.tagImageCmd(imageRes, repositoryRes, tagRes).withForce(withForce).exec();
                 console.logInfo("Tagged image " + imageRes + " in " + repositoryRes + " as " + tagRes);

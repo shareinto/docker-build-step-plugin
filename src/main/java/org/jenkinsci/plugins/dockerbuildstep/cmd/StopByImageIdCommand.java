@@ -21,11 +21,23 @@ import com.github.dockerjava.api.model.Container;
  */
 public class StopByImageIdCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final String imageId;
 
     @DataBoundConstructor
-    public StopByImageIdCommand(String imageId) {
+    public StopByImageIdCommand(String dockerUrl, String dockerVersion,String imageId) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.imageId = imageId;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     public String getImageId() {
@@ -41,7 +53,7 @@ public class StopByImageIdCommand extends DockerCommand {
 
         String imageIdRes = Resolver.buildVar(build, imageId);
         
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
         List<Container> containers = client.listContainersCmd().exec();
         for (Container c : containers) {
             if (imageIdRes.equalsIgnoreCase(c.getImage())) {

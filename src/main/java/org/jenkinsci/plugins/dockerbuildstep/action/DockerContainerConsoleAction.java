@@ -43,10 +43,15 @@ public class DockerContainerConsoleAction extends TaskAction implements Serializ
 
     private String containerName;
 
-    public DockerContainerConsoleAction(AbstractBuild<?, ?> build, String containerId) {
+    private String dockerVersion;
+    private String dockerUrl;
+
+    public DockerContainerConsoleAction(AbstractBuild<?, ?> build, String containerId, String dockerUrl, String dockerVersion) {
         super();
         this.build = build;
         this.containerId = containerId;
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
     }
 
     public String getIconFileName() {
@@ -162,14 +167,14 @@ public class DockerContainerConsoleAction extends TaskAction implements Serializ
         protected void perform(final TaskListener listener) throws Exception {
             DockerLogStreamReader reader = null;
             OutputStreamWriter writer = null;
-            
+
             try {
                 DockerClient client = ((DockerBuilder.DescriptorImpl) Jenkins.getInstance().getDescriptor(
-                        DockerBuilder.class)).getDockerClient(build, null);
+                        DockerBuilder.class)).getDockerClient(build, null, dockerUrl, dockerVersion);
                 InputStream is = client.attachContainerCmd(containerId).withFollowStream().withStdOut().withStdErr().exec();
                 reader = new DockerLogStreamReader(is);
                 writer = new OutputStreamWriter(listener.getLogger(), Charsets.UTF_8);
-                
+
                 while (!isInterrupted() && build.isBuilding()) {
                     process(reader, writer);
                     Thread.sleep(2000);

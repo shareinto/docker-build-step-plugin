@@ -16,56 +16,68 @@ import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 
 public class ExecCreateCommand extends DockerCommand {
 
-	private final String containerIds;
-	private final String command;
-	// TODO advanced config - IO streams
+    private final String dockerUrl;
+    private final String dockerVersion;
+    private final String containerIds;
+    private final String command;
+    // TODO advanced config - IO streams
 
-	@DataBoundConstructor
-	public ExecCreateCommand(String containerIds, String command) {
-		this.containerIds = containerIds;
-		this.command = command;
-	}
+    @DataBoundConstructor
+    public ExecCreateCommand(String dockerUrl, String dockerVersion, String containerIds, String command) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
+        this.containerIds = containerIds;
+        this.command = command;
+    }
 
-	public String getContainerIds() {
-		return containerIds;
-	}
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
 
-	public String getCommand() {
-		return command;
-	}
+    public String getDockerUrl() {
+        return dockerUrl;
+    }
 
-	@Override
-	public void execute(@SuppressWarnings("rawtypes") AbstractBuild build, ConsoleLogger console)
-			throws DockerException {
-		if (containerIds == null || containerIds.isEmpty()) {
-			console.logError("Container ID cannot be empty");
-			throw new IllegalArgumentException("Container ID cannot be empty");
-		}
-		if (command == null || command.isEmpty()) {
-			console.logError("Command cannot be empty");
-			throw new IllegalArgumentException("Command cannot be empty");
-		}
+    public String getContainerIds() {
+        return containerIds;
+    }
 
-		String containerIdsRes = Resolver.buildVar(build, containerIds);
-		String commandRes = Resolver.buildVar(build, command);
+    public String getCommand() {
+        return command;
+    }
 
-		List<String> ids = Arrays.asList(containerIdsRes.split(","));
-		DockerClient client = getClient(build, null);
-		for (String id : ids) {
-			id = id.trim();
-			ExecCreateCmdResponse res = client.execCreateCmd(id).withCmd(commandRes.split(" ")).exec();
-			console.logInfo(String.format("Exec command with ID '%s' created in container '%s' ", res.getId(), id));
-			// TODO export env. variables with command IDs
-		}
+    @Override
+    public void execute(@SuppressWarnings("rawtypes") AbstractBuild build, ConsoleLogger console)
+            throws DockerException {
+        if (containerIds == null || containerIds.isEmpty()) {
+            console.logError("Container ID cannot be empty");
+            throw new IllegalArgumentException("Container ID cannot be empty");
+        }
+        if (command == null || command.isEmpty()) {
+            console.logError("Command cannot be empty");
+            throw new IllegalArgumentException("Command cannot be empty");
+        }
 
-	}
+        String containerIdsRes = Resolver.buildVar(build, containerIds);
+        String commandRes = Resolver.buildVar(build, command);
 
-	@Extension
-	public static class ExecCreateCommandDescriptor extends DockerCommandDescriptor {
-		@Override
-		public String getDisplayName() {
-			return "Create exec instance in container(s)";
-		}
-	}
+        List<String> ids = Arrays.asList(containerIdsRes.split(","));
+        DockerClient client = getClient(build, null, dockerUrl, dockerVersion);
+        for (String id : ids) {
+            id = id.trim();
+            ExecCreateCmdResponse res = client.execCreateCmd(id).withCmd(commandRes.split(" ")).exec();
+            console.logInfo(String.format("Exec command with ID '%s' created in container '%s' ", res.getId(), id));
+            // TODO export env. variables with command IDs
+        }
+
+    }
+
+    @Extension
+    public static class ExecCreateCommandDescriptor extends DockerCommandDescriptor {
+        @Override
+        public String getDisplayName() {
+            return "Create exec instance in container(s)";
+        }
+    }
 
 }

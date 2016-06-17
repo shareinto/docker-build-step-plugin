@@ -1,7 +1,12 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson"
     xmlns:f="/lib/form">
     <j:set var="descriptor" value="${instance.descriptor}" />
-
+     <f:entry title="Docker URL" field="dockerUrl" description="Docker server REST API URL">
+             <f:textbox />
+        </f:entry>
+        <f:entry field="dockerVersion" title="Docker version">
+            <f:textbox />
+        </f:entry>
     <f:entry field="containerIds" title="Container ID(s)" description="Comma separated list of containers to be started.">
         <f:textbox />
     </f:entry>
@@ -40,6 +45,10 @@ help file problem.
 	    <f:entry field="containerIdsLogging" title="Capture output from" description="Comma separated list of containers to attach to and capture output from.">
 	        <f:textbox />
 	    </f:entry>
+
+	    <f:entry field="interactive" title="interactive">
+                    <f:checkbox />
+                </f:entry>
     </f:advanced>
 
 </j:jelly>

@@ -20,13 +20,25 @@ import com.github.dockerjava.api.model.Container;
  */
 public class RemoveAllCommand extends DockerCommand {
 
+    private final String dockerUrl;
+    private final String dockerVersion;
     private final boolean removeVolumes;
     private final boolean force;
 
     @DataBoundConstructor
-    public RemoveAllCommand(boolean removeVolumes, boolean force) {
+    public RemoveAllCommand(String dockerUrl, String dockerVersion,boolean removeVolumes, boolean force) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
         this.removeVolumes = removeVolumes;
         this.force = force;
+    }
+
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
+
+    public String getDockerUrl() {
+        return dockerUrl;
     }
 
     public boolean isRemoveVolumes() {
@@ -40,7 +52,7 @@ public class RemoveAllCommand extends DockerCommand {
 	@Override
     public void execute(@SuppressWarnings("rawtypes") AbstractBuild build, ConsoleLogger console)
             throws DockerException {
-        DockerClient client = getClient(build, null);
+        DockerClient client = getClient(build, null,dockerUrl,dockerVersion);
         List<Container> containers = client.listContainersCmd().withShowAll(true).exec();
         for (Container container : containers) {
             client.removeContainerCmd((container.getId())).withForce(force).withRemoveVolumes(removeVolumes).exec();

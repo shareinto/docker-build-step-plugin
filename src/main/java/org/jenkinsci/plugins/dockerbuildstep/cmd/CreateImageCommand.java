@@ -29,164 +29,174 @@ import com.github.dockerjava.api.DockerException;
 
 /**
  * This command creates a new image from specified Dockerfile.
- * 
- * @see http://docs.docker.com/reference/api/docker_remote_api_v1.13/#build-an-image-from-dockerfile-via-stdin
- * 
+ *
  * @author marcus
- * 
+ * @see http://docs.docker.com/reference/api/docker_remote_api_v1.13/#build-an-image-from-dockerfile-via-stdin
  */
 public class CreateImageCommand extends DockerCommand {
 
-	private final String dockerFolder;
-	private final String imageTag;
-	private final boolean noCache;
-	private final boolean rm;
+    private final String dockerUrl;
+    private final String dockerVersion;
+    private final String dockerFolder;
+    private final String imageTag;
+    private final boolean noCache;
+    private final boolean rm;
 
-	@DataBoundConstructor
-	public CreateImageCommand(String dockerFolder, String imageTag, boolean noCache, boolean rm) {
-		this.dockerFolder = dockerFolder;
-		this.imageTag = imageTag;
-		this.noCache = noCache;
-		this.rm = rm;
-	}
+    @DataBoundConstructor
+    public CreateImageCommand(String dockerUrl, String dockerVersion, String dockerFolder, String imageTag, boolean noCache, boolean rm) {
+        this.dockerUrl = dockerUrl;
+        this.dockerVersion = dockerVersion;
+        this.dockerFolder = dockerFolder;
+        this.imageTag = imageTag;
+        this.noCache = noCache;
+        this.rm = rm;
+    }
 
-	public String getDockerFolder() {
-		return dockerFolder;
-	}
+    public String getDockerVersion() {
+        return dockerVersion;
+    }
 
-	public String getImageTag() {
-		return imageTag;
-	}
-	
-	public boolean isNoCache() {
-		return noCache;
-	}
-	
-	public boolean isRm() {
-	    return rm;
-	}
+    public String getDockerUrl() {
+        return dockerUrl;
+    }
 
-	@Override
-	public void execute(@SuppressWarnings("rawtypes") AbstractBuild build,
-			final ConsoleLogger console) throws DockerException {
+    public String getDockerFolder() {
+        return dockerFolder;
+    }
 
-		if (dockerFolder == null) {
-			throw new IllegalArgumentException("dockerFolder is not configured");
-		}
+    public String getImageTag() {
+        return imageTag;
+    }
 
-		if (imageTag == null) {
-			throw new IllegalArgumentException("imageTag is not configured");
-		}
+    public boolean isNoCache() {
+        return noCache;
+    }
 
-		String dockerFolderRes = Resolver.buildVar(build, dockerFolder);
-		String imageTagRes = Resolver.buildVar(build, imageTag);
-		
-		String expandedDockerFolder = expandEnvironmentVariables(dockerFolderRes,
-				build, console);
+    public boolean isRm() {
+        return rm;
+    }
 
-		String expandedImageTag = expandEnvironmentVariables(imageTagRes, build,
-				console);
+    @Override
+    public void execute(@SuppressWarnings("rawtypes") AbstractBuild build,
+                        final ConsoleLogger console) throws DockerException {
 
-		FilePath folder = new FilePath(new File(expandedDockerFolder));
+        if (dockerFolder == null) {
+            throw new IllegalArgumentException("dockerFolder is not configured");
+        }
 
-		if (!exist(folder))
-			throw new IllegalArgumentException("configured dockerFolder '"
-					+ expandedDockerFolder + "' does not exist.");
+        if (imageTag == null) {
+            throw new IllegalArgumentException("imageTag is not configured");
+        }
 
-		FilePath dockerFile = folder.child("Dockerfile");
+        String dockerFolderRes = Resolver.buildVar(build, dockerFolder);
+        String imageTagRes = Resolver.buildVar(build, imageTag);
 
-		if (!exist(dockerFile))
-			throw new IllegalArgumentException("configured dockerFolder '"
-					+ folder + "' does not contain a Dockerfile.");
+        String expandedDockerFolder = expandEnvironmentVariables(dockerFolderRes,
+                build, console);
 
-		DockerClient client = getClient(build, null);
+        String expandedImageTag = expandEnvironmentVariables(imageTagRes, build,
+                console);
 
-		try {
+        FilePath folder = new FilePath(new File(expandedDockerFolder));
 
-			File docker = new File(expandedDockerFolder);
+        if (!exist(folder))
+            throw new IllegalArgumentException("configured dockerFolder '"
+                    + expandedDockerFolder + "' does not exist.");
 
-			console.logInfo("Creating docker image from " + docker.getAbsolutePath());
+        FilePath dockerFile = folder.child("Dockerfile");
 
-			InputStream istream = client.buildImageCmd(docker).withTag(expandedImageTag).withNoCache(noCache).withRemove(rm).exec();
-			
-			final List<JsonObject> errors = new ArrayList<JsonObject>();
+        if (!exist(dockerFile))
+            throw new IllegalArgumentException("configured dockerFolder '"
+                    + folder + "' does not contain a Dockerfile.");
 
-			try {
-				readJsonStream(istream, new JsonObjectCallback() {
-					public void callback(JsonObject json) {
-						if (json.containsKey("stream")) {
-							console.log(json.getString("stream"));
-						} else if (json.containsKey("status")) {
-							console.log(json.getString("status"));
-						} else if(json.containsKey("errorDetail")){
-							errors.add(json);
-							console.logError(json.containsKey("message") ? json.getString("message") : json.getString("errorDetail"));
-						}
-					}
-				});
+        DockerClient client = getClient(build, null, dockerUrl, dockerVersion);
 
-				if (!errors.isEmpty()) {
-					build.setResult(Result.FAILURE);
-				} else {
-					console.logInfo("Sucessfully created image " + expandedImageTag);
-				}
+        try {
 
-			} finally {
-				IOUtils.closeQuietly(istream);
-			}
+            File docker = new File(expandedDockerFolder);
 
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+            console.logInfo("Creating docker image from " + docker.getAbsolutePath());
 
-	}
+            InputStream istream = client.buildImageCmd(docker).withTag(expandedImageTag).withNoCache(noCache).withRemove(rm).exec();
 
-	private interface JsonObjectCallback {
-		void callback(JsonObject jsonObject);
-	}
+            final List<JsonObject> errors = new ArrayList<JsonObject>();
 
-	private void readJsonStream(InputStream istream, JsonObjectCallback callback)
-			throws IOException, UnsupportedEncodingException {
-		
-		final BufferedReader streamReader = new BufferedReader(new InputStreamReader(istream, "UTF-8")); 
-		String inputStr;
-		while ((inputStr = streamReader.readLine()) != null) {
-			JsonObject json = null;
-			try {
-				json = Json.createReader(new StringReader(inputStr)).readObject();
-			} catch (JsonParsingException e) {
-				// just ignore and continue
-				continue;
-			}
-			callback.callback(json);
-		}
-		
-	}
+            try {
+                readJsonStream(istream, new JsonObjectCallback() {
+                    public void callback(JsonObject json) {
+                        if (json.containsKey("stream")) {
+                            console.log(json.getString("stream"));
+                        } else if (json.containsKey("status")) {
+                            console.log(json.getString("status"));
+                        } else if (json.containsKey("errorDetail")) {
+                            errors.add(json);
+                            console.logError(json.containsKey("message") ? json.getString("message") : json.getString("errorDetail"));
+                        }
+                    }
+                });
 
-	private String expandEnvironmentVariables(String string,
-			@SuppressWarnings("rawtypes") AbstractBuild build, ConsoleLogger console) {
-		try {
-			return build.getEnvironment(console.getListener()).expand(string);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
+                if (!errors.isEmpty()) {
+                    build.setResult(Result.FAILURE);
+                } else {
+                    console.logInfo("Sucessfully created image " + expandedImageTag);
+                }
 
-	@Extension
-	public static class CreateImageCommandDescriptor extends
-			DockerCommandDescriptor {
-		@Override
-		public String getDisplayName() {
-			return "Create/build image";
-		}
-	}
+            } finally {
+                IOUtils.closeQuietly(istream);
+            }
 
-	private boolean exist(FilePath filePath) throws DockerException {
-		try {
-			return filePath.exists();
-		} catch (Exception e) {
-			throw new DockerException("Could not check file", 0, e);
-		}
-	}
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    private interface JsonObjectCallback {
+        void callback(JsonObject jsonObject);
+    }
+
+    private void readJsonStream(InputStream istream, JsonObjectCallback callback)
+            throws IOException, UnsupportedEncodingException {
+
+        final BufferedReader streamReader = new BufferedReader(new InputStreamReader(istream, "UTF-8"));
+        String inputStr;
+        while ((inputStr = streamReader.readLine()) != null) {
+            JsonObject json = null;
+            try {
+                json = Json.createReader(new StringReader(inputStr)).readObject();
+            } catch (JsonParsingException e) {
+                // just ignore and continue
+                continue;
+            }
+            callback.callback(json);
+        }
+
+    }
+
+    private String expandEnvironmentVariables(String string,
+                                              @SuppressWarnings("rawtypes") AbstractBuild build, ConsoleLogger console) {
+        try {
+            return build.getEnvironment(console.getListener()).expand(string);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Extension
+    public static class CreateImageCommandDescriptor extends
+            DockerCommandDescriptor {
+        @Override
+        public String getDisplayName() {
+            return "Create/build image";
+        }
+    }
+
+    private boolean exist(FilePath filePath) throws DockerException {
+        try {
+            return filePath.exists();
+        } catch (Exception e) {
+            throw new DockerException("Could not check file", 0, e);
+        }
+    }
 
 }
